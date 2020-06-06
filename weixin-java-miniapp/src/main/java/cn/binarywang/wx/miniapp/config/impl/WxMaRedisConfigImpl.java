@@ -11,7 +11,9 @@ import redis.clients.jedis.JedisPool;
  * </pre>
  *
  * @author <a href="https://github.com/winter4666">winter</a>
+ * @see WxMaRedisBetterConfigImpl
  */
+@Deprecated
 public class WxMaRedisConfigImpl extends AbstractWxMaRedisConfig {
 
   private JedisPool jedisPool;

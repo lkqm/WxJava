@@ -15,7 +15,9 @@ import java.util.concurrent.locks.Lock;
  *
  * @author yuanqixun
  * @date 2020/5/3
+ * @see WxMaRedisBetterConfigImpl
  */
+@Deprecated
 public class WxMaRedissonConfigImpl extends WxMaDefaultConfigImpl {
 
   protected final static String LOCK_KEY = "wechat_ma_lock:";

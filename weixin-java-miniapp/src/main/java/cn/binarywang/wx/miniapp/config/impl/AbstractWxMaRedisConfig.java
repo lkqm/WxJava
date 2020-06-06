@@ -12,7 +12,9 @@ import java.util.concurrent.locks.Lock;
 
 /**
  * @author <a href="https://github.com/winter4666">winter</a>
+ * @see WxMaRedisBetterConfigImpl
  */
+@Deprecated
 public abstract class AbstractWxMaRedisConfig extends WxMaDefaultConfigImpl {
 
   public interface JedisConfig {
