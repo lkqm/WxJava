@@ -70,23 +70,48 @@ public class WxOpenStorageAutoConfiguration {
   private WxOpenInRedisConfigStorage getWxOpenInRedisConfigStorage() {
     RedisProperties redisProperties = properties.getConfigStorage().getRedis();
     JedisPool jedisPool;
-    if (redisProperties != null && StringUtils.isNotEmpty(redisProperties.getHost())) {
-      jedisPool = getJedisPool();
-    } else {
+    if (redisProperties == null || StringUtils.isEmpty(redisProperties.getHost())) {
       jedisPool = applicationContext.getBean(JedisPool.class);
+    } else {
+      JedisPoolConfig jedisPoolConfig = new JedisPoolConfig();
+      if (redisProperties.getMaxActive() != null) {
+        jedisPoolConfig.setMaxTotal(redisProperties.getMaxActive());
+      }
+      if (redisProperties.getMaxIdle() != null) {
+        jedisPoolConfig.setMaxIdle(redisProperties.getMaxIdle());
+      }
+      if (redisProperties.getMaxWaitMillis() != null) {
+        jedisPoolConfig.setMaxWaitMillis(redisProperties.getMaxWaitMillis());
+      }
+      if (redisProperties.getMinIdle() != null) {
+        jedisPoolConfig.setMinIdle(redisProperties.getMinIdle());
+      }
+      jedisPoolConfig.setTestOnBorrow(true);
+      jedisPoolConfig.setTestWhileIdle(true);
+
+      jedisPool = new JedisPool(jedisPoolConfig, redisProperties.getHost(), redisProperties.getPort(),
+        redisProperties.getTimeout(), redisProperties.getPassword(), redisProperties.getDatabase());
     }
+
     WxRedisOps redisOps = new JedisWxRedisOps(jedisPool);
-    WxOpenInRedisConfigStorage config = new WxOpenInRedisConfigStorage(redisOps, properties.getConfigStorage().getKeyPrefix());
-    return config;
+    return new WxOpenInRedisConfigStorage(redisOps, properties.getConfigStorage().getKeyPrefix());
   }
 
   private WxOpenInRedisConfigStorage getWxOpenInRedissonConfigStorage() {
     RedisProperties redisProperties = properties.getConfigStorage().getRedis();
     RedissonClient redissonClient;
-    if (redisProperties != null && StringUtils.isNotEmpty(redisProperties.getHost())) {
-      redissonClient = getRedissonClient();
-    } else {
+    if (redisProperties == null || StringUtils.isEmpty(redisProperties.getHost())) {
       redissonClient = applicationContext.getBean(RedissonClient.class);
+    } else {
+      WxOpenProperties.ConfigStorage storage = properties.getConfigStorage();
+      RedisProperties redis = storage.getRedis();
+
+      Config config = new Config();
+      config.useSingleServer()
+        .setAddress("redis://" + redis.getHost() + ":" + redis.getPort())
+        .setPassword(redis.getPassword());
+      config.setTransportMode(TransportMode.NIO);
+      redissonClient = Redisson.create(config);
     }
     WxRedisOps redisOps = new RedissonWxRedisOps(redissonClient);
     WxOpenInRedisConfigStorage config = new WxOpenInRedisConfigStorage(redisOps, properties.getConfigStorage().getKeyPrefix());
@@ -100,41 +125,4 @@ public class WxOpenStorageAutoConfiguration {
     return config;
   }
 
-
-  private JedisPool getJedisPool() {
-    WxOpenProperties.ConfigStorage storage = properties.getConfigStorage();
-    RedisProperties redis = storage.getRedis();
-
-    JedisPoolConfig config = new JedisPoolConfig();
-    if (redis.getMaxActive() != null) {
-      config.setMaxTotal(redis.getMaxActive());
-    }
-    if (redis.getMaxIdle() != null) {
-      config.setMaxIdle(redis.getMaxIdle());
-    }
-    if (redis.getMaxWaitMillis() != null) {
-      config.setMaxWaitMillis(redis.getMaxWaitMillis());
-    }
-    if (redis.getMinIdle() != null) {
-      config.setMinIdle(redis.getMinIdle());
-    }
-    config.setTestOnBorrow(true);
-    config.setTestWhileIdle(true);
-
-    JedisPool pool = new JedisPool(config, redis.getHost(), redis.getPort(),
-      redis.getTimeout(), redis.getPassword(), redis.getDatabase());
-    return pool;
-  }
-
-  private RedissonClient getRedissonClient() {
-    WxOpenProperties.ConfigStorage storage = properties.getConfigStorage();
-    RedisProperties redis = storage.getRedis();
-
-    Config config = new Config();
-    config.useSingleServer()
-      .setAddress("redis://" + redis.getHost() + ":" + redis.getPort())
-      .setPassword(redis.getPassword());
-    config.setTransportMode(TransportMode.NIO);
-    return Redisson.create(config);
-  }
 }

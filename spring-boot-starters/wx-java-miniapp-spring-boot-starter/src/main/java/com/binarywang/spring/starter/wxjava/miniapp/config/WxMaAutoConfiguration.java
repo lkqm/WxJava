@@ -106,11 +106,29 @@ public class WxMaAutoConfiguration {
   private WxMaDefaultConfigImpl wxMaJedisConfigStorage() {
     RedisProperties redisProperties = wxMaProperties.getConfigStorage().getRedis();
     JedisPool jedisPool;
-    if (redisProperties != null && StringUtils.isNotEmpty(redisProperties.getHost())) {
-      jedisPool = getJedisPool();
-    } else {
+    if (redisProperties == null || StringUtils.isEmpty(redisProperties.getHost())) {
       jedisPool = applicationContext.getBean(JedisPool.class);
+    } else {
+      JedisPoolConfig jedisPoolConfig = new JedisPoolConfig();
+      if (redisProperties.getMaxActive() != null) {
+        jedisPoolConfig.setMaxTotal(redisProperties.getMaxActive());
+      }
+      if (redisProperties.getMaxIdle() != null) {
+        jedisPoolConfig.setMaxIdle(redisProperties.getMaxIdle());
+      }
+      if (redisProperties.getMaxWaitMillis() != null) {
+        jedisPoolConfig.setMaxWaitMillis(redisProperties.getMaxWaitMillis());
+      }
+      if (redisProperties.getMinIdle() != null) {
+        jedisPoolConfig.setMinIdle(redisProperties.getMinIdle());
+      }
+      jedisPoolConfig.setTestOnBorrow(true);
+      jedisPoolConfig.setTestWhileIdle(true);
+
+      jedisPool = new JedisPool(jedisPoolConfig, redisProperties.getHost(), redisProperties.getPort(),
+        redisProperties.getTimeout(), redisProperties.getPassword(), redisProperties.getDatabase());
     }
+
     WxRedisOps redisOps = new JedisWxRedisOps(jedisPool);
     return new WxMaRedisBetterConfigImpl(redisOps, wxMaProperties.getConfigStorage().getKeyPrefix());
   }
@@ -121,27 +139,4 @@ public class WxMaAutoConfiguration {
     return new WxMaRedisBetterConfigImpl(redisOps, wxMaProperties.getConfigStorage().getKeyPrefix());
   }
 
-  private JedisPool getJedisPool() {
-    ConfigStorage storage = wxMaProperties.getConfigStorage();
-    RedisProperties redis = storage.getRedis();
-
-    JedisPoolConfig config = new JedisPoolConfig();
-    if (redis.getMaxActive() != null) {
-      config.setMaxTotal(redis.getMaxActive());
-    }
-    if (redis.getMaxIdle() != null) {
-      config.setMaxIdle(redis.getMaxIdle());
-    }
-    if (redis.getMaxWaitMillis() != null) {
-      config.setMaxWaitMillis(redis.getMaxWaitMillis());
-    }
-    if (redis.getMinIdle() != null) {
-      config.setMinIdle(redis.getMinIdle());
-    }
-    config.setTestOnBorrow(true);
-    config.setTestWhileIdle(true);
-
-    return new JedisPool(config, redis.getHost(), redis.getPort(), redis.getTimeout(), redis.getPassword(),
-      redis.getDatabase());
-  }
 }
